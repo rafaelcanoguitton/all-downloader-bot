@@ -74,49 +74,62 @@ func main() {
 			if err != nil {
 				fmt.Println(err)
 			}
-			// download the song
-			songRequest, err := http.NewRequest("GET", songPath, nil)
-			songRequest.Header.Add("User-Agent", "TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet")
-			songResponse, _ := http.DefaultClient.Do(songRequest)
-			defer songResponse.Body.Close()
-      //save it in a file to feed it to ffmpeg
-      outputFileName := strconv.Itoa(rand.Intn(100000))
-      outputFile, err := os.Create("./downloads/" + outputFileName + ".mp4")
-      if err != nil {
-        fmt.Println(err)
-      }
-      _, err = io.Copy(outputFile, songResponse.Body)
-      defer outputFile.Close()
-			// ffmpeg it to m4a
-			cmd := exec.Command("ffmpeg", "-i", "./downloads/"+outputFileName + ".mp4", "-vn", "-acodec", "copy", "./downloads/"+outputFileName+".m4a")
+      //if the songpath ends in .mp3 we'll just send the url
+      hasToBeConverted := !strings.HasSuffix(songPath, ".mp3")
+      var songFile *os.File
+      var outputFileName string
+      if hasToBeConverted {
+        // download the song
+        songRequest, err := http.NewRequest("GET", songPath, nil)
+        songRequest.Header.Add("User-Agent", "TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet")
+        songResponse, _ := http.DefaultClient.Do(songRequest)
+        defer songResponse.Body.Close()
+        //save it in a file to feed it to ffmpeg
+        outputFileName := strconv.Itoa(rand.Intn(100000))
+        outputFile, err := os.Create("./downloads/" + outputFileName + ".mp4")
+        if err != nil {
+          fmt.Println(err)
+        }
+        _, err = io.Copy(outputFile, songResponse.Body)
+        defer outputFile.Close()
+        // ffmpeg it to m4a
+        cmd := exec.Command("ffmpeg", "-i", "./downloads/"+outputFileName + ".mp4", "-vn", "-acodec", "copy", "./downloads/"+outputFileName+".m4a")
 
-      out, err := cmd.Output()
-      if err != nil {
-        fmt.Println(err)
-      }
-      fmt.Println(string(out))
+        out, err := cmd.Output()
+        if err != nil {
+          fmt.Println(err)
+        }
+        fmt.Println(string(out))
 
-			outputFileConverted, err := os.Open("./downloads/" + outputFileName + ".m4a")
-      defer outputFileConverted.Close()
-      // send the song
-      songSender := bot.SendAudio(u.Message.Chat.Id, 0, "", "")
-			if err != nil {
-				fmt.Println(err)
-			}
+        songFile, err := os.Open("./downloads/" + outputFileName + ".m4a")
+        defer songFile.Close()
+      }
 			for _, mediaGroup := range mediaGroups {
 				_, err := mediaGroup.Send(u.Message.Chat.Id, false, false)
 				if err != nil {
 					fmt.Println(err)
 				}
 			}
-			songSender.SendByFile(outputFileConverted, false, false)
-      err = os.Remove("./downloads/" + outputFileName + ".mp4")
-      if err != nil {
-        fmt.Println(err)
-      }
-      err = os.Remove("./downloads/" + outputFileName + ".m4a")
-      if err != nil {
-        fmt.Println(err)
+      if hasToBeConverted {
+        songSender := bot.SendAudio(u.Message.Chat.Id, 0, "", "")
+        if err != nil {
+          fmt.Println(err)
+        }
+        songSender.SendByFile(songFile, false, false)
+        err = os.Remove("./downloads/" + outputFileName + ".mp4")
+        if err != nil {
+          fmt.Println(err)
+        }
+        err = os.Remove("./downloads/" + outputFileName + ".m4a")
+        if err != nil {
+          fmt.Println(err)
+        }
+      } else {
+        songSender := bot.SendAudio(u.Message.Chat.Id, 0, "", "")
+        if err != nil {
+          fmt.Println(err)
+        }
+        songSender.SendByFileIdOrUrl(songPath, false, false)
       }
 		}
 
