@@ -44,7 +44,7 @@ func main() {
 	patternReddit := `^https:\/\/reddit\.com\/r\/[A-Za-z0-9_]+\/s\/[A-Za-z0-9_]+$`
 
 	bot.AddHandler(patternTiktok, func(u *objs.Update) {
-		patternMobile := `^https:\/\/vm\.tiktok\.com\/[A-Za-z0-9_]+$`
+    patternMobile := `^https:\/\/vm\.tiktok\.com\/[A-Za-z0-9_]+\/?$`
 		match, _ := regexp.MatchString(patternMobile, u.Message.Text)
 		if match {
 			u.Message.Text = redirectFromTikTokMobile(u.Message.Text)
