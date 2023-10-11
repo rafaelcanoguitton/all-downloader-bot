@@ -40,7 +40,7 @@ func main() {
 	updateChannel := *(bot.GetUpdateChannel())
 
 	// Adding a handler. Everytime the bot receives message "tiktok" in a private chat, it will wait for a link
-	patternTiktok := `^https:\/\/(?:www\.)?tiktok\.com\/@[^/]+\/video\/\d+|https:\/\/vm\.tiktok\.com\/[^/]+$`
+  patternTiktok := `^https:\/\/(?:www\.)?tiktok\.com\/@[^/]+\/video\/\d+|https:\/\/vm\.tiktok\.com\/[^/]+/?$`
 	patternReddit := `^https:\/\/reddit\.com\/r\/[A-Za-z0-9_]+\/s\/[A-Za-z0-9_]+$`
 
 	bot.AddHandler(patternTiktok, func(u *objs.Update) {
