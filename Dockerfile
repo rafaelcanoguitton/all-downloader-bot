@@ -9,4 +9,5 @@ RUN apt-get update && apt-get install -y ffmpeg
 ENV TELEGRAM_TOKEN=""
 #make downloads folder
 RUN mkdir downloads
+RUN apt install yt-dlp -y
 CMD ["/all-downloader-bot"]

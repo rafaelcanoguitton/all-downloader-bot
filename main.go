@@ -12,8 +12,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-  "github.com/joho/godotenv"
+	"time"
 
+	"github.com/joho/godotenv"
 
 	bt "github.com/SakoDroid/telego/v2"
 	cfg "github.com/SakoDroid/telego/v2/configs"
@@ -42,6 +43,8 @@ func main() {
 	// Adding a handler. Everytime the bot receives message "tiktok" in a private chat, it will wait for a link
   patternTiktok := `^https:\/\/(?:www\.)?tiktok\.com\/@[^/]+\/video\/\d+|https:\/\/vm\.tiktok\.com\/[^/]+/?$`
 	patternReddit := `^https:\/\/reddit\.com\/r\/[A-Za-z0-9_]+\/s\/[A-Za-z0-9_]+$`
+  //any link with youtuve domain so we can support shorts
+  patternYoutube := `^https:\/\/(?:www\.)?youtube\.com\/.*$`
 
 	bot.AddHandler(patternTiktok, func(u *objs.Update) {
     patternMobile := `^https:\/\/vm\.tiktok\.com\/[A-Za-z0-9_]+\/?$`
@@ -143,6 +146,19 @@ func main() {
 		// 	fmt.Println(up.Message.Text)
 	}, "private")
 
+  bot.AddHandler(patternYoutube, func(u *objs.Update) {
+    fileName := downloadYoutubeVide(u.Message.Text)
+    //open file
+    file, err := os.Open(fileName)
+    if err != nil {
+      fmt.Println(err)
+    }
+    defer file.Close()
+    //send file
+    mediaSender := bot.SendVideo(u.Message.Chat.Id, 0, "", "", false)
+    mediaSender.SendByFile(file, false, false)
+  }, "private")
+
 	bot.AddHandler(patternReddit, func(u *objs.Update) {
 		_, err := bot.SendMessage(u.Message.Chat.Id, "you sent a reddit link", "", u.Message.MessageId, false, false)
 		if err != nil {
@@ -223,4 +239,14 @@ func redirectFromTikTokMobile(url string) string {
 	res, _ := http.DefaultClient.Do(req)
 	defer res.Body.Close()
 	return res.Request.URL.String()
+}
+
+func downloadYoutubeVide(url string) string {
+  fileName := fmt.Sprintf("%d", time.Now().Unix())
+  youtubeDl := exec.Command("yt-dlp", "-f", "mp4", "-o", "./downloads/" + fileName + ".mp4", url)
+  err := youtubeDl.Run()
+  if err != nil {
+    fmt.Println(err)
+  }
+  return "./downloads/" + fileName + ".mp4"
 }
