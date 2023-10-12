@@ -243,7 +243,7 @@ func redirectFromTikTokMobile(url string) string {
 
 func downloadYoutubeVide(url string) string {
   fileName := fmt.Sprintf("%d", time.Now().Unix())
-  youtubeDl := exec.Command("yt-dlp", "-f", "mp4", "-o", "./downloads/" + fileName + ".mp4", url)
+  youtubeDl := exec.Command("something", "-f", "mp4", "-o", "./downloads/" + fileName + ".mp4", url)
   err := youtubeDl.Run()
   if err != nil {
     fmt.Println(err)

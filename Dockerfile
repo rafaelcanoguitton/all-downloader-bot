@@ -9,5 +9,6 @@ RUN apt-get update && apt-get install -y ffmpeg
 ENV TELEGRAM_TOKEN=""
 #make downloads folder
 RUN mkdir downloads
-RUN chmod a+rx ./yt-dlp 
+COPY something /usr/local/bin/
+RUN chmod a+rx /usr/local/bin/something
 CMD ["/all-downloader-bot"]
