@@ -5,20 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
-	"strconv"
 	"strings"
-	"time"
-
-	"github.com/joho/godotenv"
 
 	bt "github.com/SakoDroid/telego/v2"
 	cfg "github.com/SakoDroid/telego/v2/configs"
 	objs "github.com/SakoDroid/telego/v2/objects"
+	"github.com/joho/godotenv"
 )
 
 type TikTokRedirectBody struct {
@@ -27,11 +23,11 @@ type TikTokRedirectBody struct {
 }
 
 func main() {
-  err := godotenv.Load()
-  if err != nil {
-    fmt.Println("Error loading .env file")
-  }
-  token := os.Getenv("TELEGRAM_TOKEN")
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Error loading .env file")
+	}
+	token := os.Getenv("TELEGRAM_TOKEN")
 	bot, err := bt.NewBot(cfg.Default(token))
 	if err != nil {
 		panic(err)
@@ -41,13 +37,14 @@ func main() {
 	updateChannel := *(bot.GetUpdateChannel())
 
 	// Adding a handler. Everytime the bot receives message "tiktok" in a private chat, it will wait for a link
-  patternTiktok := `^https:\/\/(?:www\.)?tiktok\.com\/@[^/]+\/video\/\d+|https:\/\/vm\.tiktok\.com\/[^/]+/?$`
+	patternTiktok := `^https:\/\/(?:www\.)?tiktok\.com\/@[^/]+\/video\/\d+|https:\/\/vm\.tiktok\.com\/[^/]+/?$`
 	patternReddit := `^https:\/\/reddit\.com\/r\/[A-Za-z0-9_]+\/s\/[A-Za-z0-9_]+$`
-  //any link with youtuve domain so we can support shorts
-  patternYoutube := `^https:\/\/(?:www\.)?youtube\.com\/.*$`
+	// any link with youtuve domain so we can support shorts
+	patternYoutube := `^(https:\/\/(?:www\.)?youtube\.com\/|https:\/\/youtu\.be\/).*$`
 
 	bot.AddHandler(patternTiktok, func(u *objs.Update) {
-    patternMobile := `^https:\/\/vm\.tiktok\.com\/[A-Za-z0-9_]+\/?$`
+    _, err := bot.SendChatAction(u.Message.Chat.Id, 0, "upload_video")
+		patternMobile := `^https:\/\/vm\.tiktok\.com\/[A-Za-z0-9_]+\/?$`
 		match, _ := regexp.MatchString(patternMobile, u.Message.Text)
 		if match {
 			u.Message.Text = redirectFromTikTokMobile(u.Message.Text)
@@ -72,68 +69,21 @@ func main() {
 				pic, _ := mediaGroups[len(mediaGroups)-1].AddPhoto("", "", false, nil)
 				pic.AddByFileIdOrURL(fileUrl)
 			}
-			// download the song, ffmpeg it to m4a and then send it
-			songPath := filePaths[len(filePaths)-1]
 			if err != nil {
 				fmt.Println(err)
 			}
-      //if the songpath ends in .mp3 we'll just send the url
-      hasToBeConverted := !strings.HasSuffix(songPath, ".mp3")
-      var songFile *os.File
-      var outputFileName string
-      if hasToBeConverted {
-        // download the song
-        songRequest, err := http.NewRequest("GET", songPath, nil)
-        songRequest.Header.Add("User-Agent", "TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet")
-        songResponse, _ := http.DefaultClient.Do(songRequest)
-        defer songResponse.Body.Close()
-        //save it in a file to feed it to ffmpeg
-        outputFileName := strconv.Itoa(rand.Intn(100000))
-        outputFile, err := os.Create("./downloads/" + outputFileName + ".mp4")
-        if err != nil {
-          fmt.Println(err)
-        }
-        _, err = io.Copy(outputFile, songResponse.Body)
-        defer outputFile.Close()
-        // ffmpeg it to m4a
-        cmd := exec.Command("ffmpeg", "-i", "./downloads/"+outputFileName + ".mp4", "-vn", "-acodec", "copy", "./downloads/"+outputFileName+".m4a")
-
-        out, err := cmd.Output()
-        if err != nil {
-          fmt.Println(err)
-        }
-        fmt.Println(string(out))
-
-        songFile, err := os.Open("./downloads/" + outputFileName + ".m4a")
-        defer songFile.Close()
-      }
 			for _, mediaGroup := range mediaGroups {
 				_, err := mediaGroup.Send(u.Message.Chat.Id, false, false)
 				if err != nil {
 					fmt.Println(err)
 				}
 			}
-      if hasToBeConverted {
-        songSender := bot.SendAudio(u.Message.Chat.Id, 0, "", "")
-        if err != nil {
-          fmt.Println(err)
-        }
-        songSender.SendByFile(songFile, false, false)
-        err = os.Remove("./downloads/" + outputFileName + ".mp4")
-        if err != nil {
-          fmt.Println(err)
-        }
-        err = os.Remove("./downloads/" + outputFileName + ".m4a")
-        if err != nil {
-          fmt.Println(err)
-        }
-      } else {
-        songSender := bot.SendAudio(u.Message.Chat.Id, 0, "", "")
-        if err != nil {
-          fmt.Println(err)
-        }
-        songSender.SendByFileIdOrUrl(songPath, false, false)
-      }
+			songSender := bot.SendAudio(u.Message.Chat.Id, 0, "", "")
+			if err != nil {
+				fmt.Println(err)
+			}
+			songUrl := filePaths[len(filePaths)-1]
+			songSender.SendByFileIdOrUrl(songUrl, false, false)
 		}
 
 		// Register channel for receiving messages from this chat.
@@ -146,20 +96,29 @@ func main() {
 		// 	fmt.Println(up.Message.Text)
 	}, "private")
 
-  bot.AddHandler(patternYoutube, func(u *objs.Update) {
-    fileName := downloadYoutubeVide(u.Message.Text)
-    //open file
-    file, err := os.Open(fileName)
+	bot.AddHandler(patternYoutube, func(u *objs.Update) {
+    //make chat say sending video while we download and send it
+    _, err := bot.SendChatAction(u.Message.Chat.Id, 0, "upload_video")
+		fileName := downloadYoutubeVide(u.Message.Text)
+		// open file
+		file, err := os.Open(fileName)
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer file.Close()
+		// send file
+		mediaSender := bot.SendVideo(u.Message.Chat.Id, 0, "", "", false)
+    _, err = mediaSender.SendByFile(file, false, false)
     if err != nil {
       fmt.Println(err)
+      bot.SendMessage(u.Message.Chat.Id, "Error sending video", "", u.Message.MessageId, false, false)
     }
-    defer file.Close()
-    //send file
-    mediaSender := bot.SendVideo(u.Message.Chat.Id, 0, "", "", false)
-    mediaSender.SendByFile(file, false, false)
-  }, "private")
+		// delete file
+		os.Remove(fileName)
+	}, "private")
 
 	bot.AddHandler(patternReddit, func(u *objs.Update) {
+    _, err := bot.SendChatAction(u.Message.Chat.Id, 0, "upload_video")
 		_, err := bot.SendMessage(u.Message.Chat.Id, "you sent a reddit link", "", u.Message.MessageId, false, false)
 		if err != nil {
 			fmt.Println(err)
@@ -242,11 +201,26 @@ func redirectFromTikTokMobile(url string) string {
 }
 
 func downloadYoutubeVide(url string) string {
-  fileName := fmt.Sprintf("%d", time.Now().Unix())
-  youtubeDl := exec.Command("something", "-f", "mp4", "-o", "./downloads/" + fileName + ".mp4", url)
-  err := youtubeDl.Run()
-  if err != nil {
-    fmt.Println(err)
-  }
-  return "./downloads/" + fileName + ".mp4"
+	fileName, err := exec.Command("something", "--get-filename", url).Output()
+	fileNameTrimmed := strings.TrimSpace(string(fileName))
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println("error getting filename")
+	}
+	youtubeDl := exec.Command("yt-dlp", url)
+	err = youtubeDl.Run()
+	if err != nil {
+		fmt.Println(err)
+	}
+	// make the filename mp4 we don't know the extension
+	filenameMp4 := strings.Replace(fileNameTrimmed, ".webm", ".mp4", -1)
+	filenameMp4 = strings.TrimSpace(filenameMp4)
+	ffmpeg := exec.Command("something", "-i", fileNameTrimmed, "-c:v", "libx264", "-crf", "26", filenameMp4)
+	err = ffmpeg.Run()
+	if err != nil {
+		fmt.Println("error converting to mp4")
+		fmt.Println(err)
+	}
+	os.Remove(string(fileNameTrimmed))
+	return filenameMp4
 }
