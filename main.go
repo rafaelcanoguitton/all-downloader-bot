@@ -119,7 +119,7 @@ func main() {
 
 	bot.AddHandler(patternReddit, func(u *objs.Update) {
     _, err := bot.SendChatAction(u.Message.Chat.Id, 0, "upload_video")
-		_, err := bot.SendMessage(u.Message.Chat.Id, "you sent a reddit link", "", u.Message.MessageId, false, false)
+		_, err = bot.SendMessage(u.Message.Chat.Id, "you sent a reddit link", "", u.Message.MessageId, false, false)
 		if err != nil {
 			fmt.Println(err)
 		}
