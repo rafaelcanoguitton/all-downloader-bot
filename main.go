@@ -207,7 +207,7 @@ func downloadYoutubeVide(url string) string {
 		fmt.Println(err)
 		fmt.Println("error getting filename")
 	}
-	youtubeDl := exec.Command("yt-dlp", url)
+	youtubeDl := exec.Command("something", url)
 	err = youtubeDl.Run()
 	if err != nil {
 		fmt.Println(err)
@@ -215,7 +215,7 @@ func downloadYoutubeVide(url string) string {
 	// make the filename mp4 we don't know the extension
 	filenameMp4 := strings.Replace(fileNameTrimmed, ".webm", ".mp4", -1)
 	filenameMp4 = strings.TrimSpace(filenameMp4)
-	ffmpeg := exec.Command("something", "-i", fileNameTrimmed, "-c:v", "libx264", "-crf", "26", filenameMp4)
+	ffmpeg := exec.Command("ffmpeg", "-i", fileNameTrimmed, "-c:v", "libx264", "-crf", "26", filenameMp4)
 	err = ffmpeg.Run()
 	if err != nil {
 		fmt.Println("error converting to mp4")
